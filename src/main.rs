@@ -24,9 +24,10 @@ const TOKEN_PREFIX: &str = "zai-sub-";
 const DEFAULT_BASE: &str = "https://api.z.ai/api/paas/v4";
 const ENV_BASE: &str = "ZAI_BASE_URL";
 const ENV_KEY: &str = "ZAI_API_KEY";
-/// Cache windows are a vendor concept; a local server has none, but the
-/// host still wants a number for its cold-cache notices. 0 = unknown.
-const CACHE_TTL_SECS: u64 = 0;
+/// Z.AI's implicit prefix cache is node-local and undocumented in
+/// lifetime — measured evicting within minutes under load; 5 minutes is
+/// the industry-norm window the host's warming replay refreshes at.
+const CACHE_TTL_SECS: u64 = 300;
 
 /// Static catalog used only when the /models probe can't reach a server.
 const FALLBACK_MODELS: &[&str] = &[
@@ -40,7 +41,7 @@ fn manifest() -> Value {
         "version": env!("CARGO_PKG_VERSION"),
         "protocol": "1.2",
         "capabilities": ["provider.credentials"],
-        "providers": [pmanifest::provider_decl(
+        "providers": [pmanifest::provider_decl_http(
             PROVIDER_ID, DISPLAY, AUTH_ID, AUTH_NAME, "api_key",
             &["models", "chat"], CACHE_TTL_SECS,
         )],
@@ -163,6 +164,8 @@ fn cli_help() -> String {
 
 fn cli_status() -> String {
     let cfg = resolve();
+    let key_src = cfg.api_key.is_some().then(key_source_label).unwrap_or_default();
+    let no_key = format!("none — set ${ENV_KEY} or `{NAME}-sub setup --key K`");
     let probe = match probe_models(&cfg) {
         Ok(rows) => format!("{} models", rows.len()),
         Err(e) => format!("unreachable ({e})"),
@@ -170,8 +173,22 @@ fn cli_status() -> String {
     format!(
         "{DISPLAY}\n  base: {}\n  key:  {}\n  probe: {probe}",
         cfg.upstream_base,
-        if cfg.api_key.is_some() { "set" } else { "none (ok for local)" },
+        if cfg.api_key.is_some() {
+            key_src.as_str()
+        } else {
+            no_key.as_str()
+        },
     )
+}
+
+/// Which rung of the credential ladder answered — shown in `status` so
+/// "set" never leaves the user guessing where the key lives.
+fn key_source_label() -> String {
+    if std::env::var(ENV_KEY).ok().filter(|s| !s.is_empty()).is_some() {
+        format!("env {ENV_KEY}")
+    } else {
+        "config api_key".to_string()
+    }
 }
 
 fn run_cli(argv: &[String]) -> Result<String, String> {
@@ -229,6 +246,11 @@ fn handle(intents: &Intents, method: &str, params: &Value) -> Value {
                 .as_array()
                 .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect())
                 .unwrap_or_default();
+            // Bare `/<name>`: empty result — the host's provider-login
+            // shortcut switches the session (subscription-plugin convention).
+            if argv.is_empty() {
+                return json!({"result": {}});
+            }
             match run_cli(&argv) {
                 Ok(text) => json!({"result": {"text": text}}),
                 Err(e) => json!({"result": {"text": e}}),
