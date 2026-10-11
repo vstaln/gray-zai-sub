@@ -166,9 +166,13 @@ fn cli_status() -> String {
     let cfg = resolve();
     let key_src = cfg.api_key.is_some().then(key_source_label).unwrap_or_default();
     let no_key = format!("none — set ${ENV_KEY} or `{NAME}-sub setup --key K`");
-    let probe = match probe_models(&cfg) {
-        Ok(rows) => format!("{} models", rows.len()),
-        Err(e) => format!("unreachable ({e})"),
+    let probe = if cfg.api_key.is_none() {
+        "skipped (no key)".to_string()
+    } else {
+        match probe_models(&cfg) {
+            Ok(rows) => format!("{} models", rows.len()),
+            Err(e) => format!("unreachable ({e})"),
+        }
     };
     format!(
         "{DISPLAY}\n  base: {}\n  key:  {}\n  probe: {probe}",
