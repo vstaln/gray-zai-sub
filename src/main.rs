@@ -207,14 +207,22 @@ fn key_source_label() -> String {
 fn run_cli(argv: &[String]) -> Result<String, String> {
     match argv.first().map(String::as_str) {
         Some("status") | None => Ok(cli_status()),
-        Some("models") => match probe_models(&resolve()) {
-            Ok(rows) => Ok(rows
-                .iter()
-                .filter_map(|m| m["id"].as_str())
-                .collect::<Vec<_>>()
-                .join("\n")),
-            Err(e) => Err(e),
-        },
+        Some("models") => {
+            let cfg = resolve();
+            if cfg.api_key.is_none() {
+                return Err(format!(
+                    "no {DISPLAY} API key — set ${ENV_KEY} or run `{NAME}-sub setup --key K`"
+                ));
+            }
+            match probe_models(&cfg) {
+                Ok(rows) => Ok(rows
+                    .iter()
+                    .filter_map(|m| m["id"].as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n")),
+                Err(e) => Err(e),
+            }
+        }
         Some("setup") => {
             let mut cfg = read_config();
             let mut it = argv[1..].iter();
