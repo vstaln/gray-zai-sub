@@ -166,7 +166,7 @@ fn cli_help() -> String {
     format!(
         "{NAME}-sub — {DISPLAY} provider for gray\n\
          usage: {NAME}-sub manifest | sidecar | setup [--base URL] [--key K] | status | models\n\
-         slash:  /{NAME} status | setup\n\
+         slash:  /{NAME} status | models | setup\n\
          config: ~/.gray/{NAME}/config.json · env {ENV_BASE} {ENV_KEY}"
     )
 }
