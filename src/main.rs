@@ -228,7 +228,13 @@ fn run_cli(argv: &[String]) -> Result<String, String> {
             let mut it = argv[1..].iter();
             while let Some(flag) = it.next() {
                 match flag.as_str() {
-                    "--base" => cfg["base_url"] = json!(it.next().ok_or("--base needs a URL")?),
+                    "--base" => {
+                        let v = it.next().ok_or("--base needs a URL")?;
+                        if !v.starts_with("http://") && !v.starts_with("https://") {
+                            return Err(format!("invalid --base {v:?} — expected http(s) URL"));
+                        }
+                        cfg["base_url"] = json!(v);
+                    }
                     "--key" => cfg["api_key"] = json!(it.next().ok_or("--key needs a value")?),
                     other => return Err(format!("unknown flag {other}")),
                 }
