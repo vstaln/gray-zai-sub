@@ -138,6 +138,15 @@ fn provider_models(params: &Value) -> Result<Value, Value> {
 fn provider_chat(intents: &Intents, params: &Value) -> Result<Value, Value> {
     let model = params["model"].as_str().unwrap_or_default().to_string();
     let cfg = Arc::new(resolve());
+    if cfg.api_key.is_none() {
+        return Err(err(
+            "unavailable",
+            format!(
+                "no {DISPLAY} API key — set ${ENV_KEY} or run `{NAME}-sub setup --key K`"
+            ),
+            true,
+        ));
+    }
     let turn = compat_turn(cfg, None);
     let (relay_url, relay_token) = relay::mint_turn(intents, &model, turn, TOKEN_PREFIX)
         .map_err(|e| err("unavailable", e, true))?;
