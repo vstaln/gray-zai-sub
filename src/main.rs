@@ -148,7 +148,7 @@ fn provider_revoke(_params: &Value) -> Result<Value, Value> {
     let mut cfg = read_config();
     cfg.as_object_mut().map(|m| m.remove("api_key"));
     let _ = write_config(&cfg);
-    Ok(json!({"revoked": true}))
+    Ok(json!({"status": "revoked"}))
 }
 
 // ---------- command surface ----------
@@ -236,11 +236,16 @@ fn handle(intents: &Intents, method: &str, params: &Value) -> Value {
             Ok(r) => json!({"result": r}),
             Err(e) => json!({"error": e}),
         },
-        "provider/refresh" => {
+        "provider/auth/refresh" => {
             cache_credential(params);
-            json!({"result": {"refreshed": true}})
+            let material = params.pointer("/credential/credential").cloned();
+            match material {
+                Some(m) => json!({"result": m}),
+                None => json!({"error": err("invalid",
+                    "refresh carried no credential material", false)}),
+            }
         }
-        "provider/revoke" => match provider_revoke(params) {
+        "provider/auth/revoke" => match provider_revoke(params) {
             Ok(r) => json!({"result": r}),
             Err(e) => json!({"error": e}),
         },
