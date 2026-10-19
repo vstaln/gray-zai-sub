@@ -1,6 +1,6 @@
 [package]
 name = "gray-zai-sub"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 rust-version = "1.88"
 description = "Z.AI (GLM) provider sidecar plugin for the gray agent harness"
