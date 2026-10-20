@@ -184,11 +184,12 @@ dependencies = [
 
 [[package]]
 name = "gray-zai-sub"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "gray-acp-bridge",
  "gray-openai-compat",
  "serde_json",
+ "ureq",
 ]
 
 [[package]]
