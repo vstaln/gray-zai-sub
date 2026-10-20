@@ -189,6 +189,7 @@ dependencies = [
  "gray-acp-bridge",
  "gray-openai-compat",
  "serde_json",
+ "ureq",
 ]
 
 [[package]]
