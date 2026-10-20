@@ -69,11 +69,16 @@ fn manifest() -> Value {
 // ---------- config ----------
 
 fn state_dir() -> std::path::PathBuf {
-    let home = std::env::var_os("GRAY_HOME")
+    if let Some(dir) = std::env::var_os("GRAY_HOME") {
+        return std::path::PathBuf::from(dir).join(NAME);
+    }
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
         .map(std::path::PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".gray")))
-        .unwrap_or_else(|| std::path::PathBuf::from("."));
-    home.join(NAME)
+        // No user home: a cwd-relative config would scribble key
+        // material into whatever directory the host ran from.
+        .unwrap_or_else(std::env::temp_dir);
+    home.join(".gray").join(NAME)
 }
 
 fn config_path() -> std::path::PathBuf {
