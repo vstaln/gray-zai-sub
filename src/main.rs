@@ -62,6 +62,7 @@ fn manifest() -> Value {
             &["models", "chat"], CACHE_TTL_SECS,
         )],
         "commands": ["/zai"],
+        "command_descriptions": {"/zai": "switch to Z.AI GLM models"},
         "subcommands": ["zai"],
     })
 }
