@@ -46,9 +46,7 @@ const TTL_429: u64 = 3600;
 const SOLE_CAP: u64 = 60;
 
 /// Static catalog used only when the /models probe can't reach a server.
-const FALLBACK_MODELS: &[&str] = &[
-    "glm-4.6", "glm-4.5", "glm-4.5-air", "glm-4.5-flash",
-];
+const FALLBACK_MODELS: &[&str] = &["glm-4.6", "glm-4.5", "glm-4.5-air", "glm-4.5-flash"];
 
 fn manifest() -> Value {
     json!({
@@ -94,7 +92,10 @@ fn read_config() -> Value {
 
 fn write_config(v: &Value) -> std::io::Result<()> {
     std::fs::create_dir_all(state_dir())?;
-    std::fs::write(config_path(), format!("{}\n", serde_json::to_string_pretty(v)?))?;
+    std::fs::write(
+        config_path(),
+        format!("{}\n", serde_json::to_string_pretty(v)?),
+    )?;
     // Key material may live here — lock it down.
     #[cfg(unix)]
     {
@@ -115,6 +116,7 @@ fn config_lock() -> Option<std::fs::File> {
     std::fs::create_dir_all(state_dir()).ok()?;
     let f = std::fs::OpenOptions::new()
         .create(true)
+        .truncate(false)
         .write(true)
         .open(state_dir().join("config.lock"))
         .ok()?;
@@ -164,7 +166,10 @@ fn accounts_of(cfg: &Value) -> Vec<Value> {
 /// Pool is authoritative once `accounts` is a non-empty array; the env
 /// key still overrides everything (ad-hoc key, same as today).
 fn pool_mode(cfg: &Value) -> bool {
-    std::env::var(ENV_KEY).ok().filter(|s| !s.is_empty()).is_none()
+    std::env::var(ENV_KEY)
+        .ok()
+        .filter(|s| !s.is_empty())
+        .is_none()
         && cfg["accounts"]
             .as_array()
             .map(|a| !a.is_empty())
@@ -263,7 +268,12 @@ struct PoolErr {
 }
 
 fn pool_err(msg: String) -> PoolErr {
-    PoolErr { msg, cool: false, http: 0, retry_after: None }
+    PoolErr {
+        msg,
+        cool: false,
+        http: 0,
+        retry_after: None,
+    }
 }
 
 /// Same POST as `openai_compat::post_chat` but keeps the status code
@@ -311,8 +321,7 @@ fn pool_turn(candidates: Vec<Account>, base: String) -> TurnFn {
         if cancel.load(Ordering::SeqCst) {
             return Err("turn cancelled".into());
         }
-        let body: Value =
-            serde_json::from_slice(raw).map_err(|e| format!("request JSON: {e}"))?;
+        let body: Value = serde_json::from_slice(raw).map_err(|e| format!("request JSON: {e}"))?;
         let wire_model = body["model"].as_str().unwrap_or_default().to_string();
         let prepared = chat::prepare_turn(&body, &wire_model)?;
         let req = to_chat_request(&prepared, &prepared.model, &body);
@@ -381,8 +390,11 @@ fn provider_models(params: &Value) -> Result<Value, Value> {
                 .map(|id| json!({"id": id, "name": id}))
                 .collect();
             if rows.is_empty() {
-                Err(err("unavailable",
-                    format!("couldn't list models from {}", cfg.upstream_base), true))
+                Err(err(
+                    "unavailable",
+                    format!("couldn't list models from {}", cfg.upstream_base),
+                    true,
+                ))
             } else {
                 Ok(json!({"models": rows}))
             }
@@ -399,9 +411,7 @@ fn provider_chat(intents: &Intents, params: &Value) -> Result<Value, Value> {
         if candidates.is_empty() {
             return Err(err(
                 "unavailable",
-                format!(
-                    "all {DISPLAY} accounts are cooling — see `{NAME}-sub account status`"
-                ),
+                format!("all {DISPLAY} accounts are cooling — see `{NAME}-sub account status`"),
                 true,
             ));
         }
@@ -430,7 +440,7 @@ fn provider_chat(intents: &Intents, params: &Value) -> Result<Value, Value> {
 }
 
 fn provider_revoke(_params: &Value) -> Result<Value, Value> {
-    let _ = edit_config(|cfg| {
+    edit_config(|cfg| {
         if let Some(m) = cfg.as_object_mut() {
             m.remove("api_key");
             m.remove("accounts");
@@ -497,7 +507,11 @@ fn cli_status() -> String {
 /// Which rung of the credential ladder answered — shown in `status` so
 /// "set" never leaves the user guessing where the key lives.
 fn key_source_label(file: &Value) -> String {
-    if std::env::var(ENV_KEY).ok().filter(|s| !s.is_empty()).is_some() {
+    if std::env::var(ENV_KEY)
+        .ok()
+        .filter(|s| !s.is_empty())
+        .is_some()
+    {
         format!("env {ENV_KEY}")
     } else if let Some(a) = pick_accounts(file).into_iter().next() {
         format!("account {}", a.label)
@@ -559,7 +573,10 @@ fn cli_account(args: &[String]) -> Result<String, String> {
                     cfg["accounts"] = json!([]);
                 }
                 let arr = cfg["accounts"].as_array_mut().unwrap();
-                if arr.iter().any(|e| e["label"].as_str() == Some(label.as_str())) {
+                if arr
+                    .iter()
+                    .any(|e| e["label"].as_str() == Some(label.as_str()))
+                {
                     return Err(format!("account {label:?} exists — remove it first"));
                 }
                 if let Some(dup) = arr
@@ -596,14 +613,12 @@ fn cli_account(args: &[String]) -> Result<String, String> {
         Some("use") => {
             let label = args.get(1).map(String::as_str);
             match label {
-                None | Some("--clear") => {
-                    account_edit(|cfg| {
-                        if let Some(m) = cfg.as_object_mut() {
-                            m.remove("preferred");
-                        }
-                        Ok("preferred account cleared — back to strategy order".to_string())
-                    })
-                }
+                None | Some("--clear") => account_edit(|cfg| {
+                    if let Some(m) = cfg.as_object_mut() {
+                        m.remove("preferred");
+                    }
+                    Ok("preferred account cleared — back to strategy order".to_string())
+                }),
                 Some(l) => account_edit(|cfg| {
                     if !accounts_of(cfg)
                         .iter()
@@ -733,7 +748,12 @@ fn handle(intents: &Intents, method: &str, params: &Value) -> Value {
         "command/run" => {
             let argv: Vec<String> = params["argv"]
                 .as_array()
-                .map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(Value::as_str)
+                        .map(str::to_string)
+                        .collect()
+                })
                 .unwrap_or_default();
             // Bare `/<name>`: empty result — the host's provider-login
             // shortcut switches the session (subscription-plugin convention).
@@ -756,7 +776,9 @@ fn sidecar() -> std::io::Result<()> {
     let mut out = std::io::stdout().lock();
     for line in stdin.lock().lines() {
         let line = line?;
-        let Ok(v) = serde_json::from_str::<Value>(&line) else { continue };
+        let Ok(v) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
         let method = v["method"].as_str().unwrap_or("");
         match v.get("id").cloned() {
             None if method == "plugin/shutdown" => return Ok(()),
