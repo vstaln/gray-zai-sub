@@ -35,5 +35,12 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Check out sibling path dependencies
+        shell: bash
+        run: |
+          grep -oE 'path *= *"\.\./[^"]+"' Cargo.toml | sed -E 's/.*"(\.\.\/[^"]+)".*/\1/' | while read -r dep; do
+            name=$(basename "$dep")
+            [ -d "$dep" ] || git clone --depth 1 "https://github.com/${{ github.repository_owner }}/${name}" "$dep"
+          done
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
