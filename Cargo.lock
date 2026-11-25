@@ -163,8 +163,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "gray-acp-bridge"
-version = "0.1.0"
+name = "gray-acp"
+version = "0.2.32"
+source = "git+https://github.com/vstaln/gray.git#3328585888fcca5747af9203a4f9d709baec5fe0"
 dependencies = [
  "anyhow",
  "serde",
@@ -177,7 +178,7 @@ dependencies = [
 name = "gray-openai-compat"
 version = "0.1.0"
 dependencies = [
- "gray-acp-bridge",
+ "gray-acp",
  "serde_json",
  "ureq",
 ]
@@ -186,7 +187,7 @@ dependencies = [
 name = "gray-zai-sub"
 version = "0.2.0"
 dependencies = [
- "gray-acp-bridge",
+ "gray-acp",
  "gray-openai-compat",
  "serde_json",
  "ureq",
