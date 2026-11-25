@@ -1,7 +1,7 @@
 //! zai-sub — Gray provider sidecar for Z.AI (GLM).
 //!
 //! Host speaks OpenAI-Responses to a per-turn loopback relay
-//! (`acp_bridge::relay`); `openai_compat` translates to the upstream
+//! (`gray_acp::relay`); `openai_compat` translates to the upstream
 //! OpenAI-compatible chat-completions endpoint.
 //!
 //! Config: ~/.gray/zai/config.json  {"base_url","api_key",
@@ -13,9 +13,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use acp_bridge::chat;
-use acp_bridge::manifest as pmanifest;
-use acp_bridge::relay::{self, Intents, TurnFn};
+use gray_acp::chat;
+use gray_acp::manifest as pmanifest;
+use gray_acp::relay::{self, Intents, TurnFn};
 use openai_compat::{
     compat_turn, credential_key, probe_models, to_chat_request, to_turn_result, Compat,
 };
